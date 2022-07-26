@@ -2,44 +2,62 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 
-const {Database, RS232} = require('./src/index.js');
+const { Database, RS232 } = require('./src/index.js');
 
-async function Main(){
+async function Main() {
     // let db = await new Database();
     // db.on('connected', ()=>{
     //     console.log('Successfully connected to database');
     // })
 
-    // const rs232 = new RS232('/dev/ttyUSB0', 9600);
-    // res232.on('open', err=>{
-    //     if(err){
-    //         console.log('Error occurred when opening RS232: '+err);
-    //     }
-    //     else{
-    //         console.log('Successfully opened rs232');
-    //     }
-    // })
+    let rs232;
 
-    app.route('/')
-    .get((req,res)=>{
-        res.send("hello");
+    RS232.Find({manufacturer: 'Moxa Inc.'})
+    .then(result=>{
+        console.log(result);
+        rs232 = new RS232(result, 9600);
+        rs232.on('open', err=>{
+            if(err){
+                console.log('Error occurred when opening RS232: '+err);
+            }
+            else{
+                console.log('Successfully opened rs232');
+                rs232.write("Hello world!\n");
+            }
+        });
     })
+    .catch(err=>{
+        console.log(err);
+    });
+    const platform = process.platform;
+
+    // Routing
+    app.route('/')
+        .get((req, res) => {
+            res.send("hello");
+        })
 
     app.route('/portInfo')
-    .get((req, res)=>{
-        RS232.List()
-        .then(portInfo=>{
-            console.log(portInfo);
-            res.send(portInfo);
-        })
-        .catch(err=>{
-            console.log('Error occurred during reading port info: ' + err);
-            res.send(err);
+        .get((req, res) => {
+            RS232.List()
+                .then(portInfo => {
+                    console.log(portInfo);
+                    res.send(portInfo);
+                })
+                .catch(err => {
+                    console.log('Error occurred during reading port info: ' + err);
+                    res.send(err);
+                });
         });
-    });
 
+    app.route('/platform')
+        .get((req, res) => {
+            res.send(`Current platform is ${platform}`);
+        });
+
+    // create listener
     let port = 80 | process.env.PORT;
-    app.listen(port, ()=>{
+    app.listen(port, () => {
         console.log(`Currenttly listening at port ${port}`);
     });
 }
