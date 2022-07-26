@@ -1,0 +1,60 @@
+--- mxu11x0.c	2021-09-02 11:07:29.000000000 +0800
++++ ./modify/mxu11x0.c	2022-07-26 13:17:47.587930600 +0800
+@@ -158,6 +158,11 @@
+ static void mxu1_throttle(struct usb_serial_port *port);
+ static void mxu1_unthrottle(struct usb_serial_port *port);
+ static int mxu1_ioctl(struct usb_serial_port *port, struct file *file, unsigned int cmd, unsigned long arg);
++#elif(LINUX_VERSION_CODE > KERNEL_VERSION(5,13,19))
++static unsigned int mxu1_write_room(struct tty_struct *tty);
++static unsigned int mxu1_chars_in_buffer(struct tty_struct *tty);
++static void mxu1_throttle(struct tty_struct *tty);
++static void mxu1_unthrottle(struct tty_struct *tty);
+ #else
+ static int mxu1_write_room(struct tty_struct *tty);
+ static int mxu1_chars_in_buffer(struct tty_struct *tty);
+@@ -1130,6 +1135,10 @@
+ #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27))
+ static int mxu1_write_room(struct usb_serial_port *port)
+ {
++#elif(LINUX_VERSION_CODE > KERNEL_VERSION(5,13,19))
++static unsigned int mxu1_write_room(struct tty_struct *tty)
++{
++struct usb_serial_port *port = tty->driver_data;
+ #else
+ static int mxu1_write_room(struct tty_struct *tty)
+ {
+@@ -1144,7 +1153,10 @@
+ 	dbg("%s - port %d", __FUNCTION__, port->port_number);
+ 
+ 	if (mxport == NULL)
+-		return -ENODEV;
++		#if(LINUX_VERSION_CODE > KERNEL_VERSION(5,13,19))
++			return ENODEV;
++		#else
++			return -ENODEV;
+ 	
+ 	spin_lock_irqsave(&mxport->mxp_lock, flags);
+ 	room = mxu1_buf_space_avail(mxport->mxp_write_buf);
+@@ -1158,6 +1170,10 @@
+ #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27))
+ static int mxu1_chars_in_buffer(struct usb_serial_port *port)
+ {
++#elif(LINUX_VERSION_CODE > KERNEL_VERSION(5,13,19))
++static unsigned int mxu1_chars_in_buffer(struct tty_struct *tty)
++{
++	struct usb_serial_port *port = tty->driver_data;
+ #else
+ static int mxu1_chars_in_buffer(struct tty_struct *tty)
+ {
+@@ -1171,7 +1187,10 @@
+ 	dbg("%s - port %d", __FUNCTION__, port->port_number);
+ 
+ 	if (mxport == NULL)
+-		return -ENODEV;
++		#if(LINUX_VERSION_CODE > KERNEL_VERSION(5,13,19))
++			return ENODEV;
++		#else
++			return -ENODEV;
+ 
+ 	spin_lock_irqsave(&mxport->mxp_lock, flags);
+ 	chars = mxu1_buf_data_avail(mxport->mxp_write_buf);
