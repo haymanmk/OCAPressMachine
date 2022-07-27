@@ -1,22 +1,19 @@
 {
   "name": "ocapressmachine",
   "version": "1.0.0",
-  "description": "This project is dedicated to create a node.js server to upload data about manufacturing onto Microsoft SQL database,",
-  "main": "app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://linxpa-pegit00.garmin.com/chanhayman/ocapressmachine.git"
+    "url": "git+https://github.com/haymanmk/OCAPressMachine.git"
   },
-  "author": "chanhayman",
+  "author": "haymanchan",
   "license": "ISC",
-  "dependencies": {
-    "body-parser": "^1.20.0",
-    "express": "^4.18.1",
-    "sequelize": "^6.21.3",
-    "serialport": "^10.4.0",
-    "tedious": "^14.7.0"
-  }
+  "bugs": {
+    "url": "https://github.com/haymanmk/OCAPressMachine/issues"
+  },
+  "homepage": "https://github.com/haymanmk/OCAPressMachine#readme"
 }
