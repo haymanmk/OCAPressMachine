@@ -1,69 +1,66 @@
-const express = require('express');
-const bodyParser = require('body-parser');
+const express = require("express");
+const bodyParser = require("body-parser");
 const app = express();
 
-const { Database, RS232 } = require('./src/index.js');
+const { Database, RS232 } = require("./src/index.js");
 
 async function Main() {
-    // let db = await new Database();
-    // db.on('connected', ()=>{
-    //     console.log('Successfully connected to database');
-    // })
+  // let db = await new Database();
+  // db.on('connected', ()=>{
+  //     console.log('Successfully connected to database');
+  // })
 
-    let rs232;
+  let rs232;
+  let target = { manufacturer: "Moxa Inc." };
+  RS232.Find(target)
+    .then((result) => {
+      console.assert(result, `[ERROR] Cannot find ${JSON.stringify(target)}.`);
 
-    RS232.Find({manufacturer: 'Moxa Inc.'})
-    .then(result=>{
-        console.log(result);
-        rs232 = new RS232(result, 9600);
-        rs232.on('open', err=>{
-            if(err){
-                console.log('Error occurred when opening RS232: '+err);
-            }
-            else{
-                console.log('Successfully opened rs232');
-                rs232.write("Hello world!\n");
-            }
-        });
+      rs232 = new RS232();
+      rs232.Connect(result, 9600);
+      rs232.on("open", (err) => {
+        if (err) {
+          console.log("Error occurred when opening RS232: " + err);
+        } else {
+          console.log("Successfully opened rs232");
+          rs232.Write("Hello world!\n");
+        }
+      });
     })
-    .catch(err=>{
-        console.log(err);
+    .catch((err) => {
+      console.log(err);
     });
-    const platform = process.platform;
+  const platform = process.platform;
 
-    // Routing
-    app.route('/')
-        .get((req, res) => {
-            res.send("hello");
-        })
+  // Routing
+  app.route("/").get((req, res) => {
+    res.send("hello");
+  });
 
-    app.route('/portInfo')
-        .get((req, res) => {
-            RS232.List()
-                .then(portInfo => {
-                    console.log(portInfo);
-                    res.send(portInfo);
-                })
-                .catch(err => {
-                    console.log('Error occurred during reading port info: ' + err);
-                    res.send(err);
-                });
-        });
+  app.route("/portInfo").get((req, res) => {
+    RS232.List()
+      .then((portInfo) => {
+        console.log(portInfo);
+        res.send(portInfo);
+      })
+      .catch((err) => {
+        console.log("Error occurred during reading port info: " + err);
+        res.send(err);
+      });
+  });
 
-    app.route('/platform')
-        .get((req, res) => {
-            res.send(`Current platform is ${platform}`);
-        });
+  app.route("/platform").get((req, res) => {
+    res.send(`Current platform is ${platform}`);
+  });
 
-    // create listener
-    let port = 80 | process.env.PORT;
-    app.listen(port, () => {
-        console.log(`Currenttly listening at port ${port}`);
-    });
+  // create listener
+  let port = 80 | process.env.PORT;
+  app.listen(port, () => {
+    console.log(`Currenttly listening at port ${port}`);
+  });
 }
 
 Main();
-
 
 // var Connection = require('tedious').Connection;
 // var Request = require('tedious').Request;
@@ -118,7 +115,6 @@ Main();
 // });
 
 // connection.connect();
-
 
 // function RequestTableContents(firstNRows, tableName) {
 //     console.log('Reading rows from the Table...');
