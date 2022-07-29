@@ -1,10 +1,10 @@
 const Readline = require("@serialport/parser-readline");
-var { SerialPort, ReadlineParser } = require("serialport");
+var { SerialPort, ReadlineParser, SerialPortMock } = require("serialport");
 const EventEmitter = require("events");
 
-class RS232 extends EventEmitter {
+class RS232 {
   constructor() {
-    super();
+    this.eventEmitter = new EventEmitter();
   }
 
   /**
@@ -93,13 +93,14 @@ class RS232 extends EventEmitter {
   }
 
   EnableReadLineParser() {
-    this.readLineParser = this.serialPort(new ReadlineParser());
+    this.readLineParser = this.serialPort.pipe(new ReadlineParser());
   }
 
   InitEventHandler() {
-    this.serialPort.on("error", this.EventHandlerSerialPortError(err));
-    this.serialPort.on("close", this.EventHandlerSerialPortError(err));
-    this.serialPort.on("data", this.EventHandlerReadLineParser(data));
+    // this.serialPort.on("error", this.EventHandlerSerialPortError);
+    // this.serialPort.on("close", this.EventHandlerSerialPortError);
+    // this.serialPort.on("open", this.EventHandlerSerialPortOpen);
+    this.serialPort.on("data", this.EventHandlerReadLineParser);
   }
 
   EventHandlerSerialPortError(err) {
@@ -109,6 +110,9 @@ class RS232 extends EventEmitter {
   EventHandlerSerialPortClose(err) {
     this.emit("close", err);
   }
+  EventHandlerSerialPortOpen(err) {
+    this.emit("open", err);
+  }
 
   EventHandlerReadLineParser(data) {
     let str = data.toString(); //Convert to string
@@ -117,10 +121,28 @@ class RS232 extends EventEmitter {
     try {
       str = JSON.stringify(data); // Convert to JSON
       let jsonData = JSON.parse(data); //Then parse it
-      this.emit("data", jsonData, null);
+      console.log(this.eventEmitter.emit("dataReady", jsonData, null));
+      console.log(this.eventEmitter.eventNames());
+      console.log("emit json", jsonData);
     } catch (err) {
-      this.emit("data", str, err);
+      //   this.emit("dataReady", str, err);
     }
+  }
+
+  mockSerialPort(path = "/dev/robot", baudRate = 9600) {
+    SerialPortMock.binding.createPort(path);
+    this.serialPort = new SerialPortMock({ path, baudRate: baudRate });
+    this.InitEventHandler();
+    this.serialPort.on("open", () => {
+      console.assert(this.serialPort.isOpen, "serial port not opened");
+      this.serialPort.port.emitData(
+        JSON.stringify({ key: "hello alley" }) + "\n"
+      );
+      //   this.serialPort.port.emitData("\n");
+      this.eventEmitter.emit("opened");
+      console.log(this.eventEmitter.eventNames());
+    });
+    console.log(this.serialPort.eventNames());
   }
 }
 

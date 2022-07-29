@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const app = express();
 
 const { Database, RS232 } = require("./src/index.js");
+const Logger = require("./src/ErrorLogger/");
 
 async function Main() {
   // let db = await new Database();
@@ -12,24 +13,38 @@ async function Main() {
 
   let rs232;
   let target = { manufacturer: "Moxa Inc." };
-  RS232.Find(target)
-    .then((result) => {
-      console.assert(result, `[ERROR] Cannot find ${JSON.stringify(target)}.`);
 
-      rs232 = new RS232();
-      rs232.Connect(result, 9600);
-      rs232.on("open", (err) => {
-        if (err) {
-          console.log("Error occurred when opening RS232: " + err);
-        } else {
-          console.log("Successfully opened rs232");
-          rs232.Write("Hello world!\n");
-        }
-      });
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+  rs232 = new RS232();
+  rs232.eventEmitter.on("opened", () => {
+    console.log("123");
+  });
+  rs232.eventEmitter.on("dataReady", (data, err) => {
+    console.log("345", data);
+  });
+  rs232.mockSerialPort();
+
+  //   RS232.Find(target)
+  //     .then((result) => {
+  //       if (!result) {
+  //         Logger.error(`Cannot find ${JSON.stringify(target)}.`);
+  //         return;
+  //       }
+
+  //       rs232 = new RS232();
+  //       rs232.Connect(result, 9600);
+  //       rs232.on("open", (err) => {
+  //         if (err) {
+  //           Logger.error("Error occurred when opening RS232: " + err);
+  //         } else {
+  //           Logger.info("Successfully opened rs232");
+  //           rs232.Write("Hello world!\n");
+  //         }
+  //       });
+  //     })
+  //     .catch((err) => {
+  //       Logger.error(err);
+  //     });
+
   const platform = process.platform;
 
   // Routing
@@ -40,11 +55,11 @@ async function Main() {
   app.route("/portInfo").get((req, res) => {
     RS232.List()
       .then((portInfo) => {
-        console.log(portInfo);
+        Logger.info(portInfo);
         res.send(portInfo);
       })
       .catch((err) => {
-        console.log("Error occurred during reading port info: " + err);
+        Logger.error("Error occurred during reading port info: " + err);
         res.send(err);
       });
   });
@@ -56,7 +71,7 @@ async function Main() {
   // create listener
   let port = 80 | process.env.PORT;
   app.listen(port, () => {
-    console.log(`Currenttly listening at port ${port}`);
+    Logger.info(`Currenttly listening at port ${port}`);
   });
 }
 
