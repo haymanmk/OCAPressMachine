@@ -1,0 +1,22 @@
+{
+  "DataBase": {
+    "DB_NAME": "PESupport",
+    "USER_NAME": "pieng",
+    "PASSWORD": "Q2iT5cwHJW3FH",
+    "HOSTNAME": "t1-pe-support",
+    "DATABASE_OPT": {
+      "dialect": "mssql",
+      "port": 1433,
+      "logging": false,
+
+      "dialectOptions": {
+        "requestTimeout": 30000
+      }
+    }
+  },
+  "RS232": {
+    "path": "/dev/ttyUSB0",
+    "baudRate": 9600,
+    "manufacturer": "Moxa Inc."
+  }
+}

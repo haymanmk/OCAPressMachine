@@ -2,9 +2,9 @@ const Readline = require("@serialport/parser-readline");
 var { SerialPort, ReadlineParser, SerialPortMock } = require("serialport");
 const EventEmitter = require("events");
 
-class RS232 {
+class RS232 extends EventEmitter {
   constructor() {
-    this.eventEmitter = new EventEmitter();
+    super();
   }
 
   /**
@@ -97,10 +97,10 @@ class RS232 {
   }
 
   InitEventHandler() {
-    // this.serialPort.on("error", this.EventHandlerSerialPortError);
-    // this.serialPort.on("close", this.EventHandlerSerialPortError);
-    // this.serialPort.on("open", this.EventHandlerSerialPortOpen);
-    this.serialPort.on("data", this.EventHandlerReadLineParser);
+    this.serialPort.on("error", this.EventHandlerSerialPortError.bind(this));
+    this.serialPort.on("close", this.EventHandlerSerialPortError.bind(this));
+    this.serialPort.on("open", this.EventHandlerSerialPortOpen.bind(this));
+    this.serialPort.on("data", this.EventHandlerReadLineParser.bind(this));
   }
 
   EventHandlerSerialPortError(err) {
@@ -117,15 +117,12 @@ class RS232 {
   EventHandlerReadLineParser(data) {
     let str = data.toString(); //Convert to string
     str = str.replace(/\r?\n|\r/g, ""); //remove '\r' from this String
-
     try {
       str = JSON.stringify(data); // Convert to JSON
       let jsonData = JSON.parse(data); //Then parse it
-      console.log(this.eventEmitter.emit("dataReady", jsonData, null));
-      console.log(this.eventEmitter.eventNames());
-      console.log("emit json", jsonData);
+      this.emit("data", jsonData, null);
     } catch (err) {
-      //   this.emit("dataReady", str, err);
+      this.emit("data", str, err);
     }
   }
 
@@ -133,16 +130,13 @@ class RS232 {
     SerialPortMock.binding.createPort(path);
     this.serialPort = new SerialPortMock({ path, baudRate: baudRate });
     this.InitEventHandler();
-    this.serialPort.on("open", () => {
-      console.assert(this.serialPort.isOpen, "serial port not opened");
-      this.serialPort.port.emitData(
-        JSON.stringify({ key: "hello alley" }) + "\n"
-      );
-      //   this.serialPort.port.emitData("\n");
-      this.eventEmitter.emit("opened");
-      console.log(this.eventEmitter.eventNames());
-    });
-    console.log(this.serialPort.eventNames());
+    // this.serialPort.on("open", () => {
+    //   console.assert(this.serialPort.isOpen, "serial port not opened");
+    //   this.serialPort.port.emitData(
+    //     JSON.stringify({ key: "hello alley" }) + "\n"
+    //   );
+    //   this.eventEmitter.emit("opened");
+    // });
   }
 }
 

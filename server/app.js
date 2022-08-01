@@ -3,23 +3,50 @@ const bodyParser = require("body-parser");
 const app = express();
 
 const { Database, RS232 } = require("./src/index.js");
-const Logger = require("./src/ErrorLogger/");
+const logger = require("./src/ErrorLogger/");
+const ReadConfig = require("./src/configs");
+const config = require("./src/config.js");
 
 async function Main() {
-  // let db = await new Database();
-  // db.on('connected', ()=>{
-  //     console.log('Successfully connected to database');
-  // })
+  let config;
+  await ReadConfig()
+    .then((conf) => {
+      config = conf;
+      logger.info(JSON.stringify(conf));
+    })
+    .catch((err) => {
+      logger.error(err);
+    });
+
+  let { HOSTNAME, DB_NAME, USER_NAME, PASSWORD, DATABASE_OPT } =
+    config.DataBase;
+  let db = await new Database(
+    (hostName = HOSTNAME),
+    (dbName = DB_NAME),
+    (userName = USER_NAME),
+    (password = PASSWORD),
+    (opt = DATABASE_OPT)
+  );
+  db.on("connect", () => {
+    console.log("Successfully connected to database");
+  });
 
   let rs232;
   let target = { manufacturer: "Moxa Inc." };
 
   rs232 = new RS232();
-  rs232.eventEmitter.on("opened", () => {
-    console.log("123");
+  rs232.on("open", () => {
+    logger.info("Serial opened");
+    rs232.serialPort.port.emitData(
+      JSON.stringify({ key: "hello alley" }) + "\n"
+    );
   });
-  rs232.eventEmitter.on("dataReady", (data, err) => {
-    console.log("345", data);
+  rs232.on("data", (data, err) => {
+    if (err) {
+      logger.error(`error occurred {err: ${err}, data: ${data}}`);
+    } else {
+      console.log(data);
+    }
   });
   rs232.mockSerialPort();
 
@@ -55,11 +82,11 @@ async function Main() {
   app.route("/portInfo").get((req, res) => {
     RS232.List()
       .then((portInfo) => {
-        Logger.info(portInfo);
+        logger.info(portInfo);
         res.send(portInfo);
       })
       .catch((err) => {
-        Logger.error("Error occurred during reading port info: " + err);
+        logger.error("Error occurred during reading port info: " + err);
         res.send(err);
       });
   });
@@ -71,7 +98,7 @@ async function Main() {
   // create listener
   let port = 80 | process.env.PORT;
   app.listen(port, () => {
-    Logger.info(`Currenttly listening at port ${port}`);
+    logger.info(`Currenttly listening at port ${port}`);
   });
 }
 
