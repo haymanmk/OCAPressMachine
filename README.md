@@ -4,5 +4,5 @@ This project is dedicated to create a node.js server to upload data about manufa
 
 # Folder Structure
 
-* frontend - store the files for UI written in NEXT.js.
-* backend - store the files for web server written in node.js.
+- client(frontend) - store the files for UI written in NEXT.js.
+- server(backend) - store the files for web server written in node.js.
