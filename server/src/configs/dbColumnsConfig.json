@@ -1,0 +1,6 @@
+{
+  "COLUMNS": {
+    "MachineID": "VarChar",
+    "Result": "Bit"
+  }
+}

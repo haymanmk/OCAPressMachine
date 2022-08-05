@@ -2,6 +2,8 @@ const Connection = require("tedious").Connection;
 const Request = require("tedious").Request;
 const TYPES = require("tedious").TYPES;
 const EventEmitter = require("events");
+const filepath = require("filepath");
+const ReadConfig = require("../configs/index.js");
 
 const {
   DB_NAME,
@@ -9,6 +11,7 @@ const {
   PASSWORD,
   HOSTNAME,
   DATABASE_OPT,
+  MAIN_CONFIG,
 } = require("../config");
 
 /**
@@ -38,29 +41,43 @@ class Database extends EventEmitter {
       authentication: {
         type: "default",
         options: {
-          userName: this.userName, // update me
-          password: this.password, // update me
+          userName: this.userName,
+          password: this.password,
         },
       },
       options: {
         database: this.dbName,
         trustServerCertificate: true,
-        // encrypt: true,
-        // enableArithAbort: true
       },
     };
 
-    // create connection to DB
-    this.connection = this.ConnectDB(this.config);
+    this.ReadMainConfig()
+      .then((conf) => {
+        this.mainConfig = conf;
+      })
+      .catch((err) => {
+        this.emit(err);
+      });
 
-    this.InitEventHandler();
+    // this.connection = this.ConnectDB(this.config);
+    // this.InitEventHandler();
   }
 
-  ConnectDB(config) {
-    let connection = new Connection(config);
-    connection.connect();
+  ConnectDB() {
+    this.connection = new Connection(this.config);
+    this.connection.connect();
+    this.InitEventHandler();
 
-    return connection;
+    return new Promise((resolve, reject) => {
+      this.connection.on("connect", (err) => {
+        if (err) {
+          this.emit(err);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   InitEventHandler() {
@@ -75,75 +92,147 @@ class Database extends EventEmitter {
   EventHandlerConnectError(err) {
     this.emit("error", err);
   }
-}
 
-let tableName = "dbo.PDO_Test_Table";
-/*
-// Attempt to connect and execute queries if connection goes through
-connection.on("connect", function (err) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log("Connected");
-    InsertData(
-      {
-        MachineID: "T3_OCA_01",
-        Result: 1,
-      },
-      tableName
-    )
-      .then((rowCount) => {
-        console.log(`${rowCount} row(s) inserted`);
-      })
-      .catch((err) => {
-        console.log("[!] Error occurred during insert data: ", err);
-      });
+  ReadMainConfig() {
+    const path = MAIN_CONFIG;
 
-    RequestTableContents(10, tableName).catch((err) => {
-      console.log("[!] Error occurred during reading table contents...", err);
+    return new Promise((resolve, reject) => {
+      ReadConfig(path)
+        .then((conf) => {
+          resolve(conf);
+        })
+        .catch((err) => {
+          reject(err);
+        });
     });
   }
-});
 
-connection.on("error", (err) => {
-  console.log("Error occurred:", err);
-});
+  Insert(row, tableName) {
+    console.log(`Inserting ${Object.keys(row)} into ${tableName}...`);
 
-connection.connect();
+    const path = this.mainConfig.DataBase.DB_COLUMNS_CONFIG;
 
-function RequestTableContents(firstNRows, tableName) {
-  console.log("Reading rows from the Table...");
-  return new Promise((resolve, reject) => {
-    // Read all rows from table
-    var request = new Request(
-      `SELECT TOP ${firstNRows} * FROM ${tableName};`,
-      function (err, rowCount, rows) {
-        if (err) {
+    return new Promise((resolve, reject) => {
+      ReadConfig(path)
+        .then((conf) => {
+          //   console.log(conf);
+          const columnNames = Object.keys(row);
+          const valueVariables = columnNames.map((element) => {
+            return `@${element}`;
+          });
+
+          let request = new Request(
+            `INSERT INTO ${tableName} (${columnNames}) VALUES (${valueVariables});`,
+            function (err, rowCount, rows) {
+              if (err) {
+                reject(err);
+              } else {
+                console.log(rowCount + " row(s) inserted");
+                resolve();
+              }
+            }
+          );
+
+          columnNames.map((name) => {
+            let type = conf.COLUMNS[name];
+            request.addParameter(name, TYPES[type], row[name]);
+          });
+
+          // Execute SQL statement
+          this.connection.execSql(request);
+        })
+        .catch((err) => {
           reject(err);
-        } else {
-          console.log(rowCount + " row(s) returned");
-          resolve(rowCount);
-        }
-      }
-    );
-
-    // Print the rows read
-    var result = "";
-    request.on("row", function (columns) {
-      columns.forEach(function (column) {
-        if (column.value === null) {
-          console.log("NULL");
-        } else {
-          result += column.value + " ";
-        }
-      });
-      console.log(result);
-      result = "";
+        });
     });
+  }
 
-    // Execute SQL statement
-    connection.execSql(request);
-  });
+  // Update(name, location, callback) {
+  //   console.log(
+  //     "Updating Location to '" + location + "' for '" + name + "'..."
+  //   );
+
+  //   // Update the employee record requested
+  //   request = new Request(
+  //     "UPDATE TestSchema.Employees SET Location=@Location WHERE Name = @Name;",
+  //     function (err, rowCount, rows) {
+  //       if (err) {
+  //         callback(err);
+  //       } else {
+  //         console.log(rowCount + " row(s) updated");
+  //         callback(null, "Jared");
+  //       }
+  //     }
+  //   );
+  //   request.addParameter("Name", TYPES.NVarChar, name);
+  //   request.addParameter("Location", TYPES.NVarChar, location);
+
+  //   // Execute SQL statement
+  //   connection.execSql(request);
+  // }
+
+  // Delete(name, callback) {
+  //   console.log("Deleting '" + name + "' from Table...");
+
+  //   // Delete the employee record requested
+  //   request = new Request(
+  //     "DELETE FROM TestSchema.Employees WHERE Name = @Name;",
+  //     function (err, rowCount, rows) {
+  //       if (err) {
+  //         callback(err);
+  //       } else {
+  //         console.log(rowCount + " row(s) deleted");
+  //         callback(null);
+  //       }
+  //     }
+  //   );
+  //   request.addParameter("Name", TYPES.NVarChar, name);
+
+  //   // Execute SQL statement
+  //   connection.execSql(request);
+  // }
+
+  // Read(callback) {
+  //   console.log("Reading rows from the Table...");
+
+  //   // Read all rows from table
+  //   request = new Request(
+  //     "SELECT Id, Name, Location FROM TestSchema.Employees;",
+  //     function (err, rowCount, rows) {
+  //       if (err) {
+  //         callback(err);
+  //       } else {
+  //         console.log(rowCount + " row(s) returned");
+  //         callback(null);
+  //       }
+  //     }
+  //   );
+
+  //   // Print the rows read
+  //   var result = "";
+  //   request.on("row", function (columns) {
+  //     columns.forEach(function (column) {
+  //       if (column.value === null) {
+  //         console.log("NULL");
+  //       } else {
+  //         result += column.value + " ";
+  //       }
+  //     });
+  //     console.log(result);
+  //     result = "";
+  //   });
+
+  //   // Execute SQL statement
+  //   connection.execSql(request);
+  // }
+
+  // Complete(err, result) {
+  //   if (err) {
+  //     callback(err);
+  //   } else {
+  //     console.log("Done!");
+  //   }
+  // }
 }
-*/
+
 module.exports = Database;

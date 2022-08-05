@@ -68,17 +68,3 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 module.exports = logger;
-
-// class Logger {
-//   constructor() {
-//     this.Init();
-//   }
-
-//   Init() {
-//   }
-
-//   _test() {
-//     this.logger.error("Error occurred");
-//   }
-
-// }

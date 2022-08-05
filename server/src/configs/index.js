@@ -1,5 +1,8 @@
 const fs = require("fs");
 const logger = require("../ErrorLogger");
+const filepath = require("filepath");
+
+const path = filepath.create(__dirname + "/mainConfig.json");
 
 /**
  * This fucntion read the system configuration file in JSON fomat.
@@ -7,8 +10,7 @@ const logger = require("../ErrorLogger");
  * @param {String} fileName
  * @returns {Promise}
  */
-function ReadConfig(fileName = __dirname + "/mainConfig.json") {
-  console.log(fileName);
+function ReadConfig(fileName = path.path) {
   return new Promise((resolve, reject) => {
     try {
       let rawdata = fs.readFileSync(fileName);

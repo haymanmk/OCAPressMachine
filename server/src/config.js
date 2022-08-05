@@ -12,4 +12,5 @@ module.exports = {
       requestTimeout: 30000, // timeout = 30 seconds
     },
   },
+  MAIN_CONFIG: "/usr/src/app/src/configs/mainConfig.json",
 };

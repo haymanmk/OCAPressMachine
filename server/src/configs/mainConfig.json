@@ -12,7 +12,8 @@
       "dialectOptions": {
         "requestTimeout": 30000
       }
-    }
+    },
+    "DB_COLUMNS_CONFIG": "/usr/src/app/src/configs/dbColumnsConfig.json"
   },
   "RS232": {
     "path": "/dev/ttyUSB0",

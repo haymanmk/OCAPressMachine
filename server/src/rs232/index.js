@@ -1,5 +1,5 @@
-const Readline = require("@serialport/parser-readline");
-var { SerialPort, ReadlineParser, SerialPortMock } = require("serialport");
+const { ReadlineParser } = require("@serialport/parser-readline");
+var { SerialPort, SerialPortMock } = require("serialport");
 const EventEmitter = require("events");
 
 class RS232 extends EventEmitter {
@@ -64,27 +64,45 @@ class RS232 extends EventEmitter {
    * @returns {Promise} - if success, emit an event, 'open'. Promise is also supported.
    */
   Connect(devPath, baudRate = 9600) {
+    this.devPath = devPath;
+    this.baudRate = baudRate;
     this.serialPort = new SerialPort({
       path: devPath,
       baudRate: baudRate,
+      autoOpen: false,
     });
+    this.InitEventHandler();
 
     return new Promise((resolve, reject) => {
-      this.serialPort.on("open", (err) => {
-        if (err) reject(err);
-        else {
-          this.EnableReadLineParser();
-          this.InitEventHandler();
-          resolve(this.emit("open"));
-        }
-      });
+      if (this.serialPort.isOpen) {
+        this.serialPort.flush();
+        this.EnableReadLineParser();
+        console.log("serial already opened.");
+        resolve(this.serialPort.emit("open"));
+      } else {
+        console.log(`opening serial port ${devPath}`);
+        this.serialPort.open((err) => {
+          if (err) {
+            setTimeout(this.Reconnect.bind(this), 5000);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      }
+    });
+  }
+
+  Reconnect() {
+    this.Connect(this.devPath, this.baudRate).catch((err) => {
+      console.log(err);
     });
   }
 
   Write(data) {
     try {
-      const jsonData = JSON.parse(data);
-      this.serialPort.write(jsonData);
+      const jsonData = JSON.stringify(data);
+      this.serialPort.write(jsonData + "\n");
     } catch (err) {
       this.serialPort.write(data);
       console.log("Failed to parse data during writing data via serial port");
@@ -94,16 +112,18 @@ class RS232 extends EventEmitter {
 
   EnableReadLineParser() {
     this.readLineParser = this.serialPort.pipe(new ReadlineParser());
+    this.readLineParser.on("data", this.EventHandlerReadLineParser.bind(this));
   }
 
   InitEventHandler() {
     this.serialPort.on("error", this.EventHandlerSerialPortError.bind(this));
     this.serialPort.on("close", this.EventHandlerSerialPortError.bind(this));
     this.serialPort.on("open", this.EventHandlerSerialPortOpen.bind(this));
-    this.serialPort.on("data", this.EventHandlerReadLineParser.bind(this));
+    // this.readLineParser.on("data", this.EventHandlerReadLineParser.bind(this));
   }
 
   EventHandlerSerialPortError(err) {
+    setTimeout(this.Reconnect.bind(this), 5000);
     this.emit("error", err);
   }
 
@@ -111,6 +131,7 @@ class RS232 extends EventEmitter {
     this.emit("close", err);
   }
   EventHandlerSerialPortOpen(err) {
+    this.EnableReadLineParser();
     this.emit("open", err);
   }
 
@@ -118,7 +139,7 @@ class RS232 extends EventEmitter {
     let str = data.toString(); //Convert to string
     str = str.replace(/\r?\n|\r/g, ""); //remove '\r' from this String
     try {
-      str = JSON.stringify(data); // Convert to JSON
+      str = JSON.parse(data); // Convert to JSON
       let jsonData = JSON.parse(data); //Then parse it
       this.emit("data", jsonData, null);
     } catch (err) {
