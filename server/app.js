@@ -124,8 +124,9 @@ async function Main() {
   });
 
   // create listener
-  let port = 80 | process.env.PORT;
-  app.listen(port, () => {
+  let port = 8500 | process.env.PORT;
+  let ip = "172.16.0.10";
+  app.listen(port, ip, () => {
     logger.info(`Currenttly listening at port ${port}`);
   });
 }

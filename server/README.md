@@ -8,7 +8,7 @@ This folder stores the codes of server side function.
 
 Open terminal. Change the direction to where the Dockerfile is stored, and type in following command.
 
-```
+```dockerfile
 docker buildx build --platform=linux/arm64/v8 -t haymanmk/nodejs18:latest --load  -f ./Dockerfile.NodeJs .
 ```
 
@@ -18,6 +18,6 @@ The host machine you used to build this image will decide the platforms this ima
 
 First thing first, open terminal and change direction to the folder of the code. Command the following line in tdhe terminal.
 
-```
+```dockerfile
 docker run --rm --privileged -v /run:/run -v $(pwd):/usr/src/app -p 80:80 -p 1433:1433 haymanmk/nodejs18:latest
 ```
